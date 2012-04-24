@@ -1,0 +1,69 @@
+<!DOCTYPE html>
+<html>
+	<head>
+		<meta charset="utf-8" />
+		<title>jquery.vertical-stack.js example</title>
+		<script type="text/javascript" src="//cdnjs.cloudflare.com/ajax/libs/jquery/1.7.2/jquery.min.js"></script>
+		<script type="text/javascript">if(typeof jQuery === "undefined") document.write(unescape("%3Cscript src='jquery-1.7.2.min.js' type='text/javascript'%3E%3C/script%3E"));</script>
+		<script type="text/javascript" src="jquery.vertical-stack.js"></script>
+		<script type="text/javascript">
+			jQuery(document).ready(function ($) {
+				$(window).verticalStack();
+			});
+		</script>
+		<style type="text/css">
+			body {
+				padding: 20px;
+				position: relative;
+				min-height: 2000px;
+			}
+
+			div {
+				padding: 20px;
+				border: 1px solid red;
+				background-color: #eee;
+			}
+
+			div.vstack-enabled {
+				background-color: #ccf;
+			}
+
+			div.vstack-stacked {
+				background-color: #cfc;
+			}
+		</style>
+	</head>
+	<body id="body">
+		<div id="d1" style="float:left; position:fixed;">d1: Hello float left</div>
+		<div id="d2" style="float:right;" data-vstack="body">
+			<p>d2: More stuff here in a p tag that floats right<br />and a bit more text underneath to make it two lines</p>
+		</div>
+		<div id="d3" style="clear:both;">
+			d3:
+			<ul>
+				<li>List item #1</li>
+				<li>List item #2</li>
+				<li>List item #3</li>
+				<li>List item #4</li>
+			</ul>
+		</div>
+		<div id="d4" style="margin-top:10px;" data-vstack="#d1, #d2">
+			<p>d4: There's some testing going on:</p>
+			<p>Margin top of 10 pixels here</p>
+		</div>
+		<div id="d5" style="float:left; padding-bottom: 50px;" data-vstack="#d4">
+			d5: Big padding of 50 pixels at the bottom and floating left
+		</div>
+		<div id="d6" style="clear:left; margin: 100px;">
+			<div>d6: Nested div and margin 100 pixels all around</div>
+		</div>
+		<div id="d7" data-vstack="#d5">
+			d7:
+			<ol>
+				<li>Ordered List item #1</li>
+				<li>Ordered List item #2</li>
+				<li>Ordered List item #3</li>
+			</ol>
+		</div>
+	</body>
+</html>
