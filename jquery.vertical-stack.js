@@ -1,4 +1,10 @@
-(function($) {
+/*!
+ * Author: Mathieu Bouchard
+ * Keywords: javascript,jquery,fixed,stack,scroll
+ * License: MIT ( http://www.opensource.org/licenses/mit-license.php )
+ * Repo: https://github.com/matb33/jquery-vertical-stack
+ */
+(function ($) {
 	$.fn.verticalStack = function (options) {
 		var settings = $.extend(true, {
 			enabledClass: "vstack-enabled",
@@ -66,8 +72,6 @@
 
 						// We've determined the most accurate crossed item
 						if ($crossedItem !== null) {
-							console.log("detected crossing", $item.attr("id"), $crossedItem.attr("id"));
-
 							// Drop a placeholder item to take up the space it used to take up,
 							// since position:fixed will cause the element to be taken out of the
 							// normal flow of the page
@@ -88,7 +92,10 @@
 							// Freeze the item's position, using corrected coords
 							$item.data("placeholder", $placeholder);
 							$item.css("position", "fixed");
-							$item.offset({top: correctedCoords.y1, left: correctedCoords.x1});
+							$item.viewportOffset({
+								top: correctedCoords.y1,
+								left: correctedCoords.x1
+							}, $viewport);
 							$item.width(itemDimProp.width);
 							$item.height(itemDimProp.height);
 
@@ -121,7 +128,10 @@
 			};
 
 			$viewport.bind("scroll", onScroll);
-			$viewport.bind("touchmove", onScroll);
+
+			$(document).ready(function () {
+				window.setTimeout(onScroll, 500);
+			});
 		});
 
 		return this;
@@ -149,7 +159,10 @@
 		}
 
 		if ($viewport === undefined) $viewport = $(window);
-		if (coords === undefined) coords = {top: 0, left: 0};
+		if (coords === undefined) coords = {
+			top: 0,
+			left: 0
+		};
 		if (mode === undefined) mode = 1;
 
 		$element = $(this);
@@ -157,14 +170,24 @@
 
 		if (mode === 0) {
 			// Setter
-			return $element.offset(coords);
+			top = coords.top;
+			left = coords.left;
+			if ($.browser.mozilla) {
+				// Compensate for bug in Firefox wrt getComputedStyle.getPropertyValue for a fixed element (when should be auto, returns odd pixel amount)
+				top = top + $viewport.scrollTop();
+				left = left + $viewport.scrollLeft();
+			}
+			return $element.offset({top: top, left: left});
 		} else {
 			// Getter
 			offset = $element.offset();
 			top = offset.top - $viewport.scrollTop();
 			left = offset.left - $viewport.scrollLeft();
 
-			return {top: top, left: left};
+			return {
+				top: top,
+				left: left
+			};
 		}
 	};
 
@@ -175,28 +198,51 @@
 		if ($element.prop("nodeName").toLowerCase() === "body") {
 			// Special handling for body. We simulate a rect of 100px height spanning
 			// the entire width, placed above the viewport
-			offset = {top: -100, left: 0};
+			offset = {
+				top: -100,
+				left: 0
+			};
 			width = $viewport.width();
 			height = 100;
-			coords = {x1: offset.left, y1: offset.top, x2: offset.left + width, y2: offset.top + height};
+			coords = {
+				x1: offset.left,
+				y1: offset.top,
+				x2: offset.left + width,
+				y2: offset.top + height
+			};
 		} else {
 			offset = $element.viewportOffset($viewport);
 			width = $element.width();
 			height = $element.height();
-			coords = {x1: offset.left, y1: offset.top, x2: offset.left + $element.outerWidth(), y2: offset.top + $element.outerHeight()};
+			coords = {
+				x1: offset.left,
+				y1: offset.top,
+				x2: offset.left + $element.outerWidth(),
+				y2: offset.top + $element.outerHeight()
+			};
 		}
 
-		return {offset: offset, width: width, height: height, coords: coords};
+		return {
+			offset: offset,
+			width: width,
+			height: height,
+			coords: coords
+		};
 	};
 
-	var hasCrossed = function(rectA, rectB) {
+	var hasCrossed = function (rectA, rectB) {
 		// Assumes that we're asking if rectA has "crossed" rectB
 		return (rectA.y1 < rectB.y2);
 	};
 
-	var correctCrossingCoords = function(rectA, rectB) {
+	var correctCrossingCoords = function (rectA, rectB) {
 		// Assumes that rectB is authoritative, i.e. the returned rect is a correction of rectA, where rectB remains fixed.
-		var rectC = {x1: rectA.x1, y1: rectA.y1, x2: rectA.x2, y2: rectA.y2};
+		var rectC = {
+			x1: rectA.x1,
+			y1: rectA.y1,
+			x2: rectA.x2,
+			y2: rectA.y2
+		};
 
 		if (rectA.y1 < rectB.y2) {
 			var diff = rectB.y2 - rectA.y1;
@@ -205,6 +251,6 @@
 		}
 
 		return rectC;
-	}
+	};
 
 })(window.jQuery);
