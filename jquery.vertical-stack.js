@@ -5,6 +5,8 @@
  * Repo: https://github.com/matb33/jquery-vertical-stack
  */
 (function ($) {
+	var isComputedStyleBuggy = false;
+
 	$.fn.verticalStack = function (options) {
 		var settings = $.extend(true, {
 			enabledClass: "vstack-enabled",
@@ -14,7 +16,7 @@
 			removeIDAttributeFromPlaceholder: true
 		}, options);
 
-		this.each(function () {
+		var main = function () {
 			var $viewport = $(this);
 
 			// Get all items that are to be looked after by our plugin
@@ -132,7 +134,12 @@
 			$(document).ready(function () {
 				window.setTimeout(onScroll, 500);
 			});
-		});
+		};
+
+		detectGetComputedStyleBug(function (isBuggy) {
+			isComputedStyleBuggy = isBuggy;
+			this.each(main);
+		}.bind(this));
 
 		return this;
 	};
@@ -172,8 +179,7 @@
 			// Setter
 			top = coords.top;
 			left = coords.left;
-			if ($.browser.mozilla) {
-				// Compensate for bug in Firefox wrt getComputedStyle.getPropertyValue for a fixed element (when should be auto, returns odd pixel amount)
+			if (isComputedStyleBuggy) {
 				top = top + $viewport.scrollTop();
 				left = left + $viewport.scrollLeft();
 			}
@@ -251,6 +257,19 @@
 		}
 
 		return rectC;
+	};
+
+	var detectGetComputedStyleBug = function (callback) {
+		// Attempt at detecting a possible bug in certain browsers (currently only Firefox).
+		// Calling getComputedStyle.getPropertyValue on a fixed element that has never had top/left set beforehand
+		// should return auto for top/left, but instead returns pixel positions.
+		$(document).ready(function () {
+			var $div = $("<div style='position:fixed;' />");
+			var div = $div.get(0);
+			$div.prependTo("body");
+			var top = div.ownerDocument.defaultView.getComputedStyle(div, null).getPropertyValue("top");
+			callback(top !== "auto");
+		});
 	};
 
 })(window.jQuery);
