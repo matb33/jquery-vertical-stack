@@ -97,7 +97,7 @@
 							$item.viewportOffset({
 								top: correctedCoords.y1,
 								left: correctedCoords.x1
-							}, $viewport);
+							}, $viewport, isComputedStyleBuggy);
 							$item.width(itemDimProp.width);
 							$item.height(itemDimProp.height);
 
@@ -144,10 +144,11 @@
 		return this;
 	};
 
-	$.fn.viewportOffset = function (param1, param2) {
+	$.fn.viewportOffset = function (param1, param2, param3) {
 		var $viewport;
 		var coords;
 		var mode;
+		var buggy;
 		var $element;
 		var elementCssPosition;
 		var offset;
@@ -155,14 +156,21 @@
 		var left;
 
 		if (param1 && typeof param1 === "object" && (param1.hasOwnProperty("top") || param1.hasOwnProperty("left"))) {
-			// Act as a setter, where param1 is the coords and param2 is the viewport
+			// Act as a setter, where:
+			// param1 is the coords
+			// param2 is the viewport
+			// param3 is the buggy boolean
 			mode = 0;
 			coords = param1;
 			$viewport = param2;
+			buggy = param3;
 		} else {
-			// Act as a getter, where param1 is the viewport
+			// Act as a getter, where:
+			// param1 is the viewport
+			// param2 is the buggy boolean
 			mode = 1;
 			$viewport = param1;
+			buggy = param2;
 		}
 
 		if ($viewport === undefined) $viewport = $(window);
@@ -171,6 +179,7 @@
 			left: 0
 		};
 		if (mode === undefined) mode = 1;
+		if (buggy === undefined ) buggy = false;
 
 		$element = $(this);
 		elementCssPosition = $element.css("position");
@@ -179,7 +188,7 @@
 			// Setter
 			top = coords.top;
 			left = coords.left;
-			if (isComputedStyleBuggy) {
+			if (buggy) {
 				top = top + $viewport.scrollTop();
 				left = left + $viewport.scrollLeft();
 			}
@@ -217,7 +226,7 @@
 				y2: offset.top + height
 			};
 		} else {
-			offset = $element.viewportOffset($viewport);
+			offset = $element.viewportOffset($viewport, isComputedStyleBuggy);
 			width = $element.width();
 			height = $element.height();
 			coords = {
@@ -268,6 +277,7 @@
 			var div = $div.get(0);
 			$div.prependTo("body");
 			var top = div.ownerDocument.defaultView.getComputedStyle(div, null).getPropertyValue("top");
+			$div.remove();
 			callback(top !== "auto");
 		});
 	};
