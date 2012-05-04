@@ -62,6 +62,12 @@ The various *Class properties are added depending on the current state of each e
 
 - The boolean `removeIDAttributeFromPlaceholder` will remove any id attributes on the placeholder (which is a clone of the stacked element). You really shouldn't have two elements with the same id, even for an invisible placeholder, so this helps keep this clean.
 
+## Notes
+
+- This is a very early version, and hasn't been tested in many scenarios. It works for the cases I've put it through, but I have no idea how it will behave when markup and CSS get a little more complicated. If you fix bugs, please do send me pull requests.
+
+- Unfortunately this doesn't look great on the iPhone/iPad because their onscroll events only fire after the scroll motion has completely stopped. The elements end up getting stacked correctly, but the stacking occurs instantly instead of incrementally. If you find a way around this, let me know! I tried a setInterval technique, but scrollTop doesn't update until the onscroll event fires.
+
 ## Enjoy!
 
 Let me know if you use this plug-in! That would help me get motivated to elaborate on the documentation.
