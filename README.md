@@ -22,7 +22,7 @@ Here is a simple self-descriptive example of some markup. The idea is that only 
 
 In this example, I've set the minimum height of the body to 2000px so as to allow us to scroll down and see the stacking effect taking place, despite there being very little content.
 
-The selectors you specify in the `data-vstack` are the elements with which this particular element will "stack" against. The special case of `body` or an empty string means that this element will stack against the top of the viewport.
+The selectors you specify in the `data-vstack` attribute are the elements with which this particular element will "stack" against. The special case of `body` or an empty string means that this element will stack against the top of the viewport.
 
 So to summarize, when scrolling down, the first div (test1) will stack against the top, the second div (test2) will pass underneath test1 and eventually off-screen, and the last div (test3) will stack against test1.
 
@@ -52,15 +52,15 @@ The plugin does take a few options, but for the most part can be left as-is. The
 
 The various *Class properties are added depending on the current state of each element:
 
-- The value of `enabledClass` is added as a class to each element that has the attribute specified in `dataAttribute` (usually `data-vstack`), as soon as the plugin is activated
+- The value of `enabledClass` is added as a class to each element that has the attribute specified in `dataAttribute` (usually `data-vstack`), as soon as the plugin is activated;
 
-- The value of `stackedClass` is added as a class to each element that is currently "stacked", i.e. has switched to `position: fixed` and is stacked up against another element.
+- The value of `stackedClass` is added as a class to each element that is currently "stacked", i.e. has switched to `position: fixed` and is stacked up against another element;
 
-- The value of `placeholderClass` is added as a class to each element that has been cloned and put in place of the original element that is now "stacked". This hidden placeholder element is necessary to maintain the placement of neighbouring elements that are still in the normal page flow.
+- The value of `placeholderClass` is added as a class to each element that has been cloned and put in place of the original element that is now "stacked". This hidden placeholder element is necessary to maintain the placement of neighbouring elements that are still in the normal page flow;
 
-- The value of `dataAttribute` is customizable in case `data-vstack` doesn't float your boat.
+- The value of `dataAttribute` is customizable in case `data-vstack` doesn't float your boat;
 
-- The boolean `removeIDAttributeFromPlaceholder` will remove any id attributes on the placeholder (which clones the element). You really shouldn't have two elements with the same id, even for an invisible placeholder, so this helps keep this clean.
+- The boolean `removeIDAttributeFromPlaceholder` will remove any id attributes on the placeholder (which is a clone of the stacked element). You really shouldn't have two elements with the same id, even for an invisible placeholder, so this helps keep this clean.
 
 ## Enjoy!
 
