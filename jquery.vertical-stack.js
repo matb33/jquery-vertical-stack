@@ -1,11 +1,16 @@
 /*!
- * jQuery Vertical Stack 1.0.2
+ * jQuery Vertical Stack 1.0.3
  * Author: Mathieu Bouchard
  * Keywords: javascript,jquery,fixed,stack,scroll
  * License: MIT ( http://www.opensource.org/licenses/mit-license.php )
  * Repo: https://github.com/matb33/jquery-vertical-stack
  */
+
 (function ($) {
+	var VERTICAL_STACK_INTERVAL;
+	var VERTICAL_STACK_HAS_SCROLLED;
+	var VERTICAL_STACK_HAS_RESIZED;
+
 	var isComputedStyleBuggy = false;
 
 	$.fn.verticalStack = function (options) {
@@ -17,7 +22,8 @@
 			bottomAttribute: "data-bottom",
 			removeIDAttributeFromPlaceholder: true,
 			preventWidth: false,
-			preventHeight: false
+			preventHeight: false,
+			checkInterval: 50
 		}, options);
 
 		var main = function () {
@@ -32,13 +38,20 @@
 				$items.addClass(settings.enabledClass);
 			}
 
-			// Watch the viewport scrolling
 			var onScroll = function () {
+				VERTICAL_STACK_HAS_SCROLLED = true;
+			};
+
+			var onResize = function () {
+				VERTICAL_STACK_HAS_RESIZED = true;
+			};
+
+			var checkScrolling = function () {
 				// Iterate through each of our items, check for crossings
 				$items.vs_checkCrossings($viewport);
 			};
 
-			var onResize = function () {
+			var checkResizing = function () {
 				// Iterate through each of our items, refresh crossings
 				$items.each(function (index, item) {
 					var $item = $(item);
@@ -47,12 +60,23 @@
 				});
 			};
 
-			$viewport.unbind("scroll", onScroll);
-			$viewport.unbind("resize", onResize);
-			$viewport.bind("scroll", onScroll);
-			$viewport.bind("resize", onResize);
+			clearInterval(VERTICAL_STACK_INTERVAL);
 
-			//window.setTimeout(onScroll, 500);	// I don't recall why this was here.
+			VERTICAL_STACK_INTERVAL = setInterval(function () {
+				if (VERTICAL_STACK_HAS_SCROLLED) {
+					checkScrolling();
+					VERTICAL_STACK_HAS_SCROLLED = false;
+				}
+				if (VERTICAL_STACK_HAS_RESIZED) {
+					checkResizing();
+					VERTICAL_STACK_HAS_RESIZED = false;
+				}
+			}, settings.checkInterval);
+
+			$viewport.unbind("scroll", onScroll).bind("scroll", onScroll);
+			$viewport.unbind("resize", onResize).bind("resize", onResize);
+
+			$viewport.trigger("scroll");
 		};
 
 		$.fn.vs_checkCrossings = function ($viewport) {
@@ -327,6 +351,9 @@
 
 			return rect;
 		};
+
+		VERTICAL_STACK_HAS_SCROLLED = true;
+		VERTICAL_STACK_HAS_RESIZED = false;
 
 		var that = this;
 		detectGetComputedStyleBug(function (isBuggy) {
