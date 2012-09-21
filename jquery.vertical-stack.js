@@ -1,4 +1,5 @@
 /*!
+ * jQuery Vertical Stack 1.0.2
  * Author: Mathieu Bouchard
  * Keywords: javascript,jquery,fixed,stack,scroll
  * License: MIT ( http://www.opensource.org/licenses/mit-license.php )
@@ -13,11 +14,15 @@
 			stackedClass: "vstack-stacked",
 			placeholderClass: "vstack-placeholder",
 			dataAttribute: "data-vstack",
-			removeIDAttributeFromPlaceholder: true
+			bottomAttribute: "data-bottom",
+			removeIDAttributeFromPlaceholder: true,
+			preventWidth: false,
+			preventHeight: false
 		}, options);
 
 		var main = function () {
 			var $viewport = $(this);
+			var $document = $(document);
 
 			// Get all items that are to be looked after by our plugin
 			var $items = $("[" + settings.dataAttribute + "]");
@@ -42,12 +47,12 @@
 				});
 			};
 
+			$viewport.unbind("scroll", onScroll);
+			$viewport.unbind("resize", onResize);
 			$viewport.bind("scroll", onScroll);
 			$viewport.bind("resize", onResize);
 
-			$(document).ready(function () {
-				window.setTimeout(onScroll, 500);
-			});
+			//window.setTimeout(onScroll, 500);	// I don't recall why this was here.
 		};
 
 		$.fn.vs_checkCrossings = function ($viewport) {
@@ -161,8 +166,13 @@
 					top: correctedCoords.y1,
 					left: correctedCoords.x1
 				}, $viewport);
-				$item.width(itemDimProp.width);
-				$item.height(itemDimProp.height);
+				if (!settings.preventWidth) {
+					$item.width(itemDimProp.width);
+				}
+				if (!settings.preventHeight) {
+					$item.height(itemDimProp.height);
+				}
+				$item.attr(settings.bottomAttribute, correctedCoords.y2);
 
 				if (settings.stackedClass !== "") {
 					$item.addClass(settings.stackedClass);
@@ -184,6 +194,7 @@
 					item.style.top = "";
 					item.style.left = "";
 					$item.removeData("placeholder");
+					$item.removeAttr(settings.bottomAttribute);
 
 					if (settings.stackedClass !== "") {
 						$item.removeClass(settings.stackedClass);
@@ -292,10 +303,36 @@
 			};
 		};
 
+		$.fn.vs_getProjectedRectAtOffset = function (offset, $viewport) {
+			// Currently, this function does not take the offset into account,
+			// which means the function doesn't "project". This is more complex
+			// and will eventually be written.
+			var $element = $(this);
+			var rect = {x1: 0, y1: 0, x2: 0, y2: 0};
+			var sum = 0;
+
+			$("[" + settings.dataAttribute + "]").each(function (index, item) {
+				var props = $(item).vs_getDimensionalProperties($viewport);
+
+				if (item === $element[0]) {
+					rect.x1 = props.coords.x1;
+					rect.x2 = props.coords.x2;
+					rect.y1 = 0 + sum;
+					rect.y2 = (props.coords.y2 - props.coords.y1) + sum;
+					return false;
+				}
+
+				sum += (props.coords.y2 - props.coords.y1);
+			});
+
+			return rect;
+		};
+
+		var that = this;
 		detectGetComputedStyleBug(function (isBuggy) {
 			isComputedStyleBuggy = isBuggy;
-			this.each(main);
-		}.bind(this));
+			that.each(main);
+		});
 
 		return this;
 	};
