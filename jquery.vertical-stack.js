@@ -217,6 +217,8 @@
 					$item.css("position", $placeholder.css("position"));
 					item.style.top = "";
 					item.style.left = "";
+					item.style.width = "";
+					item.style.height = "";
 					$item.removeData("placeholder");
 					$item.removeAttr(settings.bottomAttribute);
 
