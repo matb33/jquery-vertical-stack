@@ -214,7 +214,7 @@
 				var $placeholder = $item.data("placeholder");
 
 				if ($placeholder !== undefined) {
-					$item.css("position", $placeholder.css("position"));
+					item.style.position = "";
 					item.style.top = "";
 					item.style.left = "";
 					item.style.width = "";
