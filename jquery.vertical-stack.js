@@ -1,5 +1,5 @@
 /*!
- * jQuery Vertical Stack 1.0.3
+ * jQuery Vertical Stack 1.0.5
  * Author: Mathieu Bouchard
  * Keywords: javascript,jquery,fixed,stack,scroll
  * License: MIT ( http://www.opensource.org/licenses/mit-license.php )
@@ -37,6 +37,7 @@
 			if (settings.enabledClass !== "") {
 				$items.addClass(settings.enabledClass);
 			}
+			$items.trigger("enabled.vs");
 
 			var onScroll = function () {
 				VERTICAL_STACK_HAS_SCROLLED = true;
@@ -166,43 +167,48 @@
 				var $item = $(item);
 				var $placeholder;
 
-				// Drop a placeholder item to take up the space it used to take up,
-				// since position:fixed will cause the element to be taken out of the
-				// normal flow of the page
-				$placeholder = $item.clone();
-				$placeholder.addClass(settings.placeholderClass);
-				$placeholder.removeClass(settings.enabledClass);
-				$placeholder.removeClass(settings.stackedClass);
-				$placeholder.removeAttr(settings.dataAttribute);
-				$placeholder.css("visibility", "hidden");
+				var evt = $.Event("freezeItem.vs");
+				$item.trigger(evt);
 
-				if (settings.removeIDAttributeFromPlaceholder) {
-					$placeholder.removeAttr("id");
+				if (!evt.isDefaultPrevented()) {
+					// Drop a placeholder item to take up the space it used to take up,
+					// since position:fixed will cause the element to be taken out of the
+					// normal flow of the page
+					$placeholder = $item.clone();
+					$placeholder.addClass(settings.placeholderClass);
+					$placeholder.removeClass(settings.enabledClass);
+					$placeholder.removeClass(settings.stackedClass);
+					$placeholder.removeAttr(settings.dataAttribute);
+					$placeholder.css("visibility", "hidden");
+
+					if (settings.removeIDAttributeFromPlaceholder) {
+						$placeholder.removeAttr("id");
+					}
+
+					// Compute the correct coords as to be flush against the bottom of the crossed item
+					correctedCoords = correctCrossingCoords(itemDimProp.coords, crossedItemDimProp.coords);
+
+					// Freeze the item's position, using corrected coords
+					$item.data("placeholder", $placeholder);
+					$item.css("position", "fixed");
+					$item.vs_viewportOffset({
+						top: correctedCoords.y1,
+						left: correctedCoords.x1
+					}, $viewport);
+					if (!settings.preventWidth) {
+						$item.width(itemDimProp.width);
+					}
+					if (!settings.preventHeight) {
+						$item.height(itemDimProp.height);
+					}
+					$item.attr(settings.bottomAttribute, correctedCoords.y2);
+
+					if (settings.stackedClass !== "") {
+						$item.addClass(settings.stackedClass);
+					}
+
+					$placeholder.insertBefore($item);
 				}
-
-				// Compute the correct coords as to be flush against the bottom of the crossed item
-				correctedCoords = correctCrossingCoords(itemDimProp.coords, crossedItemDimProp.coords);
-
-				// Freeze the item's position, using corrected coords
-				$item.data("placeholder", $placeholder);
-				$item.css("position", "fixed");
-				$item.vs_viewportOffset({
-					top: correctedCoords.y1,
-					left: correctedCoords.x1
-				}, $viewport);
-				if (!settings.preventWidth) {
-					$item.width(itemDimProp.width);
-				}
-				if (!settings.preventHeight) {
-					$item.height(itemDimProp.height);
-				}
-				$item.attr(settings.bottomAttribute, correctedCoords.y2);
-
-				if (settings.stackedClass !== "") {
-					$item.addClass(settings.stackedClass);
-				}
-
-				$placeholder.insertBefore($item);
 			});
 
 			return this;
@@ -212,22 +218,27 @@
 			this.each(function (index, item) {
 				var $item = $(item);
 				var $placeholder = $item.data("placeholder");
+				var evt;
 
 				if ($placeholder !== undefined) {
-					item.style.position = "";
-					item.style.top = "";
-					item.style.left = "";
-					item.style.width = "";
-					item.style.height = "";
-					$item.removeData("placeholder");
-					$item.removeAttr(settings.bottomAttribute);
+					evt = $.Event("releaseItem.vs");
+					$item.trigger(evt);
 
-					if (settings.stackedClass !== "") {
-						$item.removeClass(settings.stackedClass);
+					if (!evt.isDefaultPrevented()) {
+						item.style.position = "";
+						item.style.top = "";
+						item.style.left = "";
+						item.style.width = "";
+						item.style.height = "";
+						$item.removeData("placeholder");
+						$item.removeAttr(settings.bottomAttribute);
+
+						if (settings.stackedClass !== "") {
+							$item.removeClass(settings.stackedClass);
+						}
+						// Remove the unneeded placeholder
+						$placeholder.remove();
 					}
-
-					// Remove the unneeded placeholder
-					$placeholder.remove();
 				}
 			});
 
