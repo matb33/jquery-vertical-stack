@@ -1,10 +1,16 @@
 /*!
+ * jQuery Vertical Stack 1.0.5
  * Author: Mathieu Bouchard
  * Keywords: javascript,jquery,fixed,stack,scroll
  * License: MIT ( http://www.opensource.org/licenses/mit-license.php )
  * Repo: https://github.com/matb33/jquery-vertical-stack
  */
+
 (function ($) {
+	var VERTICAL_STACK_INTERVAL;
+	var VERTICAL_STACK_HAS_SCROLLED;
+	var VERTICAL_STACK_HAS_RESIZED;
+
 	var isComputedStyleBuggy = false;
 
 	$.fn.verticalStack = function (options) {
@@ -13,11 +19,16 @@
 			stackedClass: "vstack-stacked",
 			placeholderClass: "vstack-placeholder",
 			dataAttribute: "data-vstack",
-			removeIDAttributeFromPlaceholder: true
+			bottomAttribute: "data-bottom",
+			removeIDAttributeFromPlaceholder: true,
+			preventWidth: false,
+			preventHeight: false,
+			checkInterval: 50
 		}, options);
 
 		var main = function () {
 			var $viewport = $(this);
+			var $document = $(document);
 
 			// Get all items that are to be looked after by our plugin
 			var $items = $("[" + settings.dataAttribute + "]");
@@ -26,14 +37,22 @@
 			if (settings.enabledClass !== "") {
 				$items.addClass(settings.enabledClass);
 			}
+			$items.trigger("enabled.vs");
 
-			// Watch the viewport scrolling
 			var onScroll = function () {
+				VERTICAL_STACK_HAS_SCROLLED = true;
+			};
+
+			var onResize = function () {
+				VERTICAL_STACK_HAS_RESIZED = true;
+			};
+
+			var checkScrolling = function () {
 				// Iterate through each of our items, check for crossings
 				$items.vs_checkCrossings($viewport);
 			};
 
-			var onResize = function () {
+			var checkResizing = function () {
 				// Iterate through each of our items, refresh crossings
 				$items.each(function (index, item) {
 					var $item = $(item);
@@ -42,12 +61,23 @@
 				});
 			};
 
-			$viewport.bind("scroll", onScroll);
-			$viewport.bind("resize", onResize);
+			clearInterval(VERTICAL_STACK_INTERVAL);
 
-			$(document).ready(function () {
-				window.setTimeout(onScroll, 500);
-			});
+			VERTICAL_STACK_INTERVAL = setInterval(function () {
+				if (VERTICAL_STACK_HAS_SCROLLED) {
+					checkScrolling();
+					VERTICAL_STACK_HAS_SCROLLED = false;
+				}
+				if (VERTICAL_STACK_HAS_RESIZED) {
+					checkResizing();
+					VERTICAL_STACK_HAS_RESIZED = false;
+				}
+			}, settings.checkInterval);
+
+			$viewport.unbind("scroll", onScroll).bind("scroll", onScroll);
+			$viewport.unbind("resize", onResize).bind("resize", onResize);
+
+			$viewport.trigger("scroll");
 		};
 
 		$.fn.vs_checkCrossings = function ($viewport) {
@@ -137,38 +167,48 @@
 				var $item = $(item);
 				var $placeholder;
 
-				// Drop a placeholder item to take up the space it used to take up,
-				// since position:fixed will cause the element to be taken out of the
-				// normal flow of the page
-				$placeholder = $item.clone();
-				$placeholder.addClass(settings.placeholderClass);
-				$placeholder.removeClass(settings.enabledClass);
-				$placeholder.removeClass(settings.stackedClass);
-				$placeholder.removeAttr(settings.dataAttribute);
-				$placeholder.css("visibility", "hidden");
+				var evt = $.Event("freezeItem.vs");
+				$item.trigger(evt);
 
-				if (settings.removeIDAttributeFromPlaceholder) {
-					$placeholder.removeAttr("id");
+				if (!evt.isDefaultPrevented()) {
+					// Drop a placeholder item to take up the space it used to take up,
+					// since position:fixed will cause the element to be taken out of the
+					// normal flow of the page
+					$placeholder = $item.clone();
+					$placeholder.addClass(settings.placeholderClass);
+					$placeholder.removeClass(settings.enabledClass);
+					$placeholder.removeClass(settings.stackedClass);
+					$placeholder.removeAttr(settings.dataAttribute);
+					$placeholder.css("visibility", "hidden");
+
+					if (settings.removeIDAttributeFromPlaceholder) {
+						$placeholder.removeAttr("id");
+					}
+
+					// Compute the correct coords as to be flush against the bottom of the crossed item
+					correctedCoords = correctCrossingCoords(itemDimProp.coords, crossedItemDimProp.coords);
+
+					// Freeze the item's position, using corrected coords
+					$item.data("placeholder", $placeholder);
+					$item.css("position", "fixed");
+					$item.vs_viewportOffset({
+						top: correctedCoords.y1,
+						left: correctedCoords.x1
+					}, $viewport);
+					if (!settings.preventWidth) {
+						$item.width(itemDimProp.width);
+					}
+					if (!settings.preventHeight) {
+						$item.height(itemDimProp.height);
+					}
+					$item.attr(settings.bottomAttribute, correctedCoords.y2);
+
+					if (settings.stackedClass !== "") {
+						$item.addClass(settings.stackedClass);
+					}
+
+					$placeholder.insertBefore($item);
 				}
-
-				// Compute the correct coords as to be flush against the bottom of the crossed item
-				correctedCoords = correctCrossingCoords(itemDimProp.coords, crossedItemDimProp.coords);
-
-				// Freeze the item's position, using corrected coords
-				$item.data("placeholder", $placeholder);
-				$item.css("position", "fixed");
-				$item.vs_viewportOffset({
-					top: correctedCoords.y1,
-					left: correctedCoords.x1
-				}, $viewport);
-				$item.width(itemDimProp.width);
-				$item.height(itemDimProp.height);
-
-				if (settings.stackedClass !== "") {
-					$item.addClass(settings.stackedClass);
-				}
-
-				$placeholder.insertBefore($item);
 			});
 
 			return this;
@@ -178,19 +218,27 @@
 			this.each(function (index, item) {
 				var $item = $(item);
 				var $placeholder = $item.data("placeholder");
+				var evt;
 
 				if ($placeholder !== undefined) {
-					$item.css("position", $placeholder.css("position"));
-					item.style.top = "";
-					item.style.left = "";
-					$item.removeData("placeholder");
+					evt = $.Event("releaseItem.vs");
+					$item.trigger(evt);
 
-					if (settings.stackedClass !== "") {
-						$item.removeClass(settings.stackedClass);
+					if (!evt.isDefaultPrevented()) {
+						item.style.position = "";
+						item.style.top = "";
+						item.style.left = "";
+						item.style.width = "";
+						item.style.height = "";
+						$item.removeData("placeholder");
+						$item.removeAttr(settings.bottomAttribute);
+
+						if (settings.stackedClass !== "") {
+							$item.removeClass(settings.stackedClass);
+						}
+						// Remove the unneeded placeholder
+						$placeholder.remove();
 					}
-
-					// Remove the unneeded placeholder
-					$placeholder.remove();
 				}
 			});
 
@@ -292,10 +340,39 @@
 			};
 		};
 
+		$.fn.vs_getProjectedRectAtOffset = function (offset, $viewport) {
+			// Currently, this function does not take the offset into account,
+			// which means the function doesn't "project". This is more complex
+			// and will eventually be written.
+			var $element = $(this);
+			var rect = {x1: 0, y1: 0, x2: 0, y2: 0};
+			var sum = 0;
+
+			$("[" + settings.dataAttribute + "]").each(function (index, item) {
+				var props = $(item).vs_getDimensionalProperties($viewport);
+
+				if (item === $element[0]) {
+					rect.x1 = props.coords.x1;
+					rect.x2 = props.coords.x2;
+					rect.y1 = 0 + sum;
+					rect.y2 = (props.coords.y2 - props.coords.y1) + sum;
+					return false;
+				}
+
+				sum += (props.coords.y2 - props.coords.y1);
+			});
+
+			return rect;
+		};
+
+		VERTICAL_STACK_HAS_SCROLLED = true;
+		VERTICAL_STACK_HAS_RESIZED = false;
+
+		var that = this;
 		detectGetComputedStyleBug(function (isBuggy) {
 			isComputedStyleBuggy = isBuggy;
-			this.each(main);
-		}.bind(this));
+			that.each(main);
+		});
 
 		return this;
 	};
